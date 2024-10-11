@@ -6,6 +6,9 @@ namespace ComlanServer
 {
     public partial class Main : Form
     {
+        /// <summary>
+        /// the listener to accept clients
+        /// </summary>
         private static TcpListener? _listener;
         private static readonly List<TcpClient> _clients = [];
         private static readonly object _clientLock = new();
@@ -15,6 +18,10 @@ namespace ComlanServer
             InitializeComponent();
         }
 
+        /// <summary>
+        /// Accept clients and handle them
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
         private static void AcceptClients()
         {
             if (_listener == null)
@@ -35,6 +42,10 @@ namespace ComlanServer
             }
         }
 
+        /// <summary>
+        /// Handle the client
+        /// </summary>
+        /// <param name="client"></param>
         private static void HandleClient(TcpClient client)
         {
             NetworkStream stream = client.GetStream();
@@ -51,7 +62,7 @@ namespace ComlanServer
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erreur lors de la réception du message : " + ex.Message);
+                MessageBox.Show("Error when handle client : " + ex.Message);
             }
             finally
             {
@@ -63,6 +74,10 @@ namespace ComlanServer
             }
         }
 
+        /// <summary>
+        /// Broadcast the message to all clients
+        /// </summary>
+        /// <param name="message"></param>
         private static void BroadcastMessage(string message)
         {
             byte[] data = Encoding.UTF8.GetBytes(message);
@@ -77,12 +92,17 @@ namespace ComlanServer
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Erreur lors de l'envoi du message : " + ex.Message);
+                        MessageBox.Show("Erreur when broadcast the message : " + ex.Message);
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// The start button click event
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ButtonStart_Click(object sender, EventArgs e)
         {
             int port = 8888;
@@ -94,6 +114,11 @@ namespace ComlanServer
             acceptThread.Start();
         }
 
+        /// <summary>
+        /// The stop button click event
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ButtonStop_Click(object sender, EventArgs e)
         {
             _listener?.Stop();
