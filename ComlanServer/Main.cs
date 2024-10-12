@@ -49,7 +49,7 @@ namespace ComlanServer
         private static void HandleClient(TcpClient client)
         {
             NetworkStream stream = client.GetStream();
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[4096];
 
             int bytesRead;
             try
@@ -62,7 +62,7 @@ namespace ComlanServer
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error when handle client : " + ex.Message);
+                MessageBox.Show("Error when handle client : " + ex.Message, "ComlanServer - Error");
             }
             finally
             {
@@ -92,7 +92,7 @@ namespace ComlanServer
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Erreur when broadcast the message : " + ex.Message);
+                        MessageBox.Show("Erreur when broadcast the message : " + ex.Message, "ComlanServer - Error");
                     }
                 }
             }
