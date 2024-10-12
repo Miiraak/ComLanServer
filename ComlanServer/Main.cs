@@ -10,19 +10,24 @@ namespace ComlanServer
         /// the listener to accept clients
         /// </summary>
         private static TcpListener? _listener;
-        private static readonly List<TcpClient> _clients = [];
+        private static readonly List<TcpClient> _clients = new();
         private static readonly object _clientLock = new();
+        private static int numberUser = 0;
 
         public Main()
         {
             InitializeComponent();
+            labelServerState.Text = "Stopped";
+            labelServerIP.Text = "-.-.-.-";
+            labelServerPort.Text = "-";
+            labelUserConnected.Text = numberUser.ToString();
         }
 
         /// <summary>
         /// Accept clients and handle them
         /// </summary>
         /// <exception cref="InvalidOperationException"></exception>
-        private static void AcceptClients()
+        private void AcceptClients()
         {
             if (_listener == null)
             {
@@ -37,6 +42,9 @@ namespace ComlanServer
                     _clients.Add(client);
                 }
 
+                numberUser++;
+                labelUserConnected.Text = numberUser.ToString();
+
                 Thread clientThread = new(() => HandleClient(client));
                 clientThread.Start();
             }
@@ -46,7 +54,7 @@ namespace ComlanServer
         /// Handle the client
         /// </summary>
         /// <param name="client"></param>
-        private static void HandleClient(TcpClient client)
+        private void HandleClient(TcpClient client)
         {
             NetworkStream stream = client.GetStream();
             byte[] buffer = new byte[4096];
@@ -70,6 +78,9 @@ namespace ComlanServer
                 {
                     _clients.Remove(client);
                 }
+                numberUser--;
+                labelUserConnected.Text = numberUser.ToString();
+
                 client.Close();
             }
         }
@@ -78,7 +89,7 @@ namespace ComlanServer
         /// Broadcast the message to all clients
         /// </summary>
         /// <param name="message"></param>
-        private static void BroadcastMessage(string message)
+        private void BroadcastMessage(string message)
         {
             byte[] data = Encoding.UTF8.GetBytes(message);
             lock (_clientLock)
@@ -106,12 +117,30 @@ namespace ComlanServer
         private void ButtonStart_Click(object sender, EventArgs e)
         {
             int port = 8888;
+            labelServerPort.Text = port.ToString();
             _listener = new TcpListener(IPAddress.Any, port);
             _listener.Start();
-            label.Text = $"Server listening on: {_listener.LocalEndpoint}";
+            labelServerState.Text = "Running...";
+
+            string localIP = GetLocalIPAddress();
+            labelServerIP.Text = localIP;
 
             Thread acceptThread = new(AcceptClients);
             acceptThread.Start();
+        }
+
+        /// <summary>
+        /// Get the local IP address used for communication within the local network
+        /// </summary>
+        /// <returns>Local IP address</returns>
+        private string GetLocalIPAddress()
+        {
+            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+            {
+                socket.Connect(IPAddress.Broadcast, 65530); // Use a known IP address (Google DNS) to determine the local IP
+                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                return endPoint?.Address.ToString() ?? "No IPv4 address found";
+            }
         }
 
         /// <summary>
