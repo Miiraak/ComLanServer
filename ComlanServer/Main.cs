@@ -13,6 +13,7 @@ namespace ComlanServer
         private static readonly List<TcpClient> _clients = new();
         private static readonly object _clientLock = new();
         private static int numberUser = 0;
+        private static int numberMessage = 0;
 
         public Main()
         {
@@ -21,6 +22,8 @@ namespace ComlanServer
             labelServerIP.Text = "-.-.-.-";
             labelServerPort.Text = "-";
             labelUserConnected.Text = numberUser.ToString();
+            labelMessageSend.Text = numberMessage.ToString();
+            buttonStop.Enabled = false;
         }
 
         /// <summary>
@@ -29,24 +32,31 @@ namespace ComlanServer
         /// <exception cref="InvalidOperationException"></exception>
         private void AcceptClients()
         {
-            if (_listener == null)
+            try
             {
-                throw new InvalidOperationException("Listener is not initialized.");
-            }
-
-            while (true)
-            {
-                TcpClient client = _listener.AcceptTcpClient();
-                lock (_clientLock)
+                if (_listener == null)
                 {
-                    _clients.Add(client);
+                    throw new InvalidOperationException("Listener is not initialized.");
                 }
 
-                numberUser++;
-                labelUserConnected.Text = numberUser.ToString();
+                while (true)
+                {
+                    TcpClient client = _listener.AcceptTcpClient();
+                    lock (_clientLock)
+                    {
+                        _clients.Add(client);
+                    }
 
-                Thread clientThread = new(() => HandleClient(client));
-                clientThread.Start();
+                    numberUser++;
+                    labelUserConnected.Text = numberUser.ToString();
+
+                    Thread clientThread = new(() => HandleClient(client));
+                    clientThread.Start();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error when accept clients : " + ex.Message);
             }
         }
 
@@ -106,6 +116,9 @@ namespace ComlanServer
                         MessageBox.Show("Erreur when broadcast the message : " + ex.Message, "ComlanServer - Error");
                     }
                 }
+
+                numberMessage++;
+                labelMessageSend.Text = Convert.ToString(numberMessage);
             }
         }
 
@@ -116,17 +129,21 @@ namespace ComlanServer
         /// <param name="e"></param>
         private void ButtonStart_Click(object sender, EventArgs e)
         {
+            labelServerState.Text = "Setting up...";
+            buttonStart.Enabled = false;
+
             int port = 8888;
             labelServerPort.Text = port.ToString();
             _listener = new TcpListener(IPAddress.Any, port);
             _listener.Start();
-            labelServerState.Text = "Running...";
 
             string localIP = GetLocalIPAddress();
             labelServerIP.Text = localIP;
 
             Thread acceptThread = new(AcceptClients);
             acceptThread.Start();
+            labelServerState.Text = "Running...";
+            buttonStop.Enabled = true;
         }
 
         /// <summary>
@@ -150,8 +167,40 @@ namespace ComlanServer
         /// <param name="e"></param>
         private void ButtonStop_Click(object sender, EventArgs e)
         {
+            buttonStop.Enabled = false;
+            labelServerState.Text = "Stopped";
+            labelServerIP.Text = "-.-.-.-";
+            labelServerPort.Text = "-";
+            numberUser = 0;
+            labelUserConnected.Text = numberUser.ToString();
+            numberMessage = 0;
+            labelMessageSend.Text = numberMessage.ToString();
+
+            if (_clients.Count != 0)
+            {
+                lock (_clientLock)
+                {
+                    foreach (var client in _clients)
+                    {
+                        client.Close();
+                    }
+                    _clients.Clear();
+                }
+            }
             _listener?.Stop();
-            this.Close();
+
+            buttonStart.Enabled = true;
+        }
+
+        private void buttonMinimize_Click(object sender, EventArgs e)
+        {
+            Main.ActiveForm.WindowState = FormWindowState.Minimized;
+        }
+
+        private void buttonClose_Click(object sender, EventArgs e)
+        {
+            _listener?.Stop();
+            Application.Exit();
         }
     }
 }
